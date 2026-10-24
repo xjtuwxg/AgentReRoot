@@ -21,6 +21,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/klauspost/compress/zstd"
+
 	"github.com/xjtuwxg/AgentReRoot/internal/adapter"
 	"github.com/xjtuwxg/AgentReRoot/internal/journal"
 	"github.com/xjtuwxg/AgentReRoot/internal/pathx"
@@ -156,6 +158,12 @@ func (a *Adapter) Migrate(tx *journal.Tx, oldPath, newPath string) error {
 				return err
 			}
 		}
+		// Codex compresses older rollouts to rollout-*.jsonl.zst.
+		for _, f := range adapter.FindExt(tx, filepath.Join(a.Home, dir), ".zst") {
+			if err := rewriteZstRollout(tx, f, oldPath, newPath, desc+" (compressed rollout)"); err != nil {
+				return err
+			}
+		}
 	}
 	for _, db := range a.stateDBs() {
 		if _, err := tx.SQLPrefix(db, "threads", "cwd", oldPath, newPath, desc+" (threads.cwd)"); err != nil {
@@ -197,7 +205,40 @@ func rolloutCwd(file string) string {
 		return ""
 	}
 	defer fh.Close()
-	r := bufio.NewReaderSize(fh, 1<<16)
+	return metaCwd(bufio.NewReaderSize(fh, 1<<16))
+}
+
+// rewriteZstRollout rewrites a compressed rollout of a session that ran
+// inside oldPath, keeping it compressed.
+func rewriteZstRollout(tx *journal.Tx, f, oldPath, newPath, desc string) error {
+	if !strings.HasSuffix(f, ".jsonl.zst") {
+		return nil
+	}
+	data, err := tx.ReadFile(f)
+	if err != nil {
+		return nil
+	}
+	plain, err := zstdDec.DecodeAll(data, nil)
+	if err != nil {
+		return nil // not ours to repair; leave it untouched
+	}
+	if cwd := metaCwd(bufio.NewReader(bytes.NewReader(plain))); cwd == "" || !pathx.Within(cwd, oldPath) {
+		return nil
+	}
+	out, n := rewrite.JSON(plain, oldPath, newPath)
+	if n == 0 {
+		return nil
+	}
+	return tx.WriteFile(f, zstdEnc.EncodeAll(out, nil), desc, n)
+}
+
+var (
+	zstdDec, _ = zstd.NewReader(nil)
+	zstdEnc, _ = zstd.NewWriter(nil)
+)
+
+// metaCwd returns the cwd of the session_meta line among the first lines of r.
+func metaCwd(r *bufio.Reader) string {
 	for i := 0; i < 5; i++ {
 		line, err := r.ReadBytes('\n')
 		var v struct {

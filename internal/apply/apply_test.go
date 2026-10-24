@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/klauspost/compress/zstd"
+
 	"github.com/xjtuwxg/AgentReRoot/internal/adapter/claude"
 	"github.com/xjtuwxg/AgentReRoot/internal/adapter/registry"
 	"github.com/xjtuwxg/AgentReRoot/internal/apply"
@@ -103,6 +105,9 @@ func newFixture(t *testing.T) *fixture {
 
 	write(t, filepath.Join(f.codex, "sessions", "2026", "01", "01", "rollout-1.jsonl"),
 		`{"type":"session_meta","payload":{"cwd":"`+foo+`"}}`+"\n")
+	enc, _ := zstd.NewWriter(nil)
+	write(t, filepath.Join(f.codex, "sessions", "2025", "12", "01", "rollout-0.jsonl.zst"),
+		string(enc.EncodeAll([]byte(`{"type":"session_meta","payload":{"cwd":"`+foo+`"}}`+"\n"), nil)))
 	write(t, filepath.Join(f.codex, "config.toml"),
 		"model = \"x\"\n\n[projects.\""+foo+"\"]\ntrust_level = \"trusted\"\n")
 	db, err := journal.OpenSQLite(filepath.Join(f.codex, "state_5.sqlite"), false)
@@ -265,6 +270,11 @@ func TestApplyMigratesAgentStateAndUndoRestores(t *testing.T) {
 	// Codex.
 	if s := read(t, filepath.Join(f.codex, "sessions", "2026", "01", "01", "rollout-1.jsonl")); !strings.Contains(s, newFoo) {
 		t.Errorf("rollout not rewritten: %s", s)
+	}
+	dec, _ := zstd.NewReader(nil)
+	zplain, err := dec.DecodeAll([]byte(read(t, filepath.Join(f.codex, "sessions", "2025", "12", "01", "rollout-0.jsonl.zst"))), nil)
+	if err != nil || !strings.Contains(string(zplain), newFoo) {
+		t.Errorf("compressed rollout not rewritten: %s, %v", zplain, err)
 	}
 	if s := read(t, filepath.Join(f.codex, "config.toml")); !strings.Contains(s, `[projects."`+newFoo+`"]`) {
 		t.Errorf("config.toml not rewritten: %s", s)

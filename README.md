@@ -27,6 +27,14 @@ scan, proposes a plan, shows you the dry run, and applies it after you agree.
 go install github.com/xjtuwxg/AgentReRoot/cmd/reroot@latest
 ```
 
+`go install` puts the binary in `$(go env GOPATH)/bin` (usually `~/go/bin`).
+If your shell then says `command not found: reroot`, add that directory to
+your `PATH`, for example in `~/.zshrc` or `~/.bashrc`:
+
+```bash
+export PATH="$(go env GOPATH)/bin:$PATH"
+```
+
 Single static binary, macOS and Linux. Windows is planned.
 
 ## Quick start
