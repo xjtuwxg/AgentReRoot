@@ -37,6 +37,26 @@ export PATH="$(go env GOPATH)/bin:$PATH"
 
 Single static binary, macOS and Linux. Windows is planned.
 
+## Web UI
+
+```bash
+reroot ui ~/workspace
+```
+
+Opens a local page (bound to 127.0.0.1, protected by a one-time token) with:
+
+- **Overview**: a workspace map (one tile per project, grouped by folder,
+  colored by last activity), activity per folder, and overlap hints.
+- **Projects**: a sortable, filterable table; click a project for details
+  (README, git, agent sessions and memory, warnings) and actions.
+- **Plan**: build move / merge / archive operations by clicking or editing,
+  with live validation, then a dry run that shows every folder move and every
+  Claude/Codex state change per operation, and Apply after confirmation.
+- **History**: past applies with one-click undo, and `verify`.
+
+The UI edits a plan file (`~/.reroot/plans/<root>.yaml`, or `--plan file`), so
+an agent can write a plan and you can review and apply it visually.
+
 ## Quick start
 
 ```bash

@@ -418,7 +418,10 @@ func mergeMemoryDir(tx *journal.Tx, src, dst, label string, move bool) error {
 			merged = append(merged, '\n')
 		}
 	}
-	merged = append(merged, []byte("\n## Merged from "+label+"\n\n")...)
+	if len(merged) > 0 {
+		merged = append(merged, '\n')
+	}
+	merged = append(merged, []byte("## Merged from "+label+"\n\n")...)
 	merged = append(merged, index...)
 	return tx.WriteFile(dstIndex, merged, "claude: merge MEMORY.md index from "+label, 0)
 }

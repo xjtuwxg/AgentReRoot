@@ -22,6 +22,7 @@ type Action struct {
 	Path   string `json:"path,omitempty"`
 	Target string `json:"target,omitempty"`
 	Count  int    `json:"count,omitempty"`
+	Op     int    `json:"op,omitempty"` // 1-based plan operation that caused it
 }
 
 // Entry is one line of journal.jsonl.
@@ -54,6 +55,8 @@ type Meta struct {
 type Tx struct {
 	DryRun  bool
 	Actions []Action
+	// Op is the plan operation currently executing; it tags new Actions.
+	Op int
 
 	meta     Meta
 	dir      string
@@ -157,7 +160,10 @@ func (tx *Tx) append(e Entry) error {
 	return tx.f.Sync()
 }
 
-func (tx *Tx) record(a Action) { tx.Actions = append(tx.Actions, a) }
+func (tx *Tx) record(a Action) {
+	a.Op = tx.Op
+	tx.Actions = append(tx.Actions, a)
+}
 
 // Real maps a path to where its content currently lives (identity unless dry run).
 func (tx *Tx) Real(p string) string {

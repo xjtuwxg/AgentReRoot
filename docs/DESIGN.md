@@ -189,10 +189,26 @@ Windows (drive letters, `\` separators, case-insensitive matching) can be added
 later. The binary is a single static Go executable (pure-Go SQLite driver, no
 cgo).
 
-## 10. Roadmap
+## 10. Web UI
+
+`reroot ui [root]` serves an embedded single-page app (plain HTML/CSS/JS, no
+build step, works offline) from the same binary. It is a plan editor on top of
+the same packages the CLI uses: `scan` for the overview, `plan.Resolve` for
+live validation, `apply.Run` for dry run and apply, `journal` for history and
+undo. Actions carry the index of the plan operation that caused them, so the
+preview groups agent-state changes per operation.
+
+Because the UI can move files, the server:
+
+- listens on loopback only and refuses other addresses;
+- requires a random per-run token (in the start URL) on every API request;
+- rejects requests whose `Host` is not the loopback address (DNS rebinding);
+- requires an explicit `confirm=yes` on apply, which the page sends only after
+  a fresh dry run of the exact same plan and a confirmation dialog.
+
+## 11. Roadmap
 
 - v0.1: scan, plan check, apply, undo, verify; Claude Code, Codex and git adapters.
 - v0.2: MCP server (`reroot mcp`) exposing scan/check/apply as tools; Cursor and
   Gemini CLI adapters; cross-device moves.
-- v0.3: interactive TUI plan editor; Windows.
-- later: GUI.
+- v0.3: Windows; report folders left empty after a plan; desktop wrapper for the web UI.

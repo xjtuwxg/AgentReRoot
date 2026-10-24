@@ -40,7 +40,7 @@ Typical loop:
 		Version:       Version,
 	}
 	root.PersistentFlags().BoolVar(&a.json, "json", false, "machine-readable JSON output")
-	root.AddCommand(a.scanCmd(), a.planCmd(), a.applyCmd(), a.undoCmd(), a.historyCmd(), a.verifyCmd())
+	root.AddCommand(a.scanCmd(), a.planCmd(), a.applyCmd(), a.undoCmd(), a.historyCmd(), a.verifyCmd(), a.uiCmd())
 	if err := root.Execute(); err != nil {
 		if a.json {
 			a.emit(map[string]string{"error": err.Error()})

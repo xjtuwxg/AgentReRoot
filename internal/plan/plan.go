@@ -43,6 +43,17 @@ type Step struct {
 	Into  string // merge target, empty otherwise
 }
 
+// OpError is a validation error of one operation (Index is 1-based).
+type OpError struct {
+	Index int    `json:"index"`
+	Op    string `json:"op"`
+	Msg   string `json:"msg"`
+}
+
+func (e *OpError) Error() string {
+	return fmt.Sprintf("operation %d (%s): %s", e.Index, e.Op, e.Msg)
+}
+
 // ArchiveDir is the default archive area, relative to the plan root.
 const ArchiveDir = "_archive"
 
@@ -82,7 +93,7 @@ func (p *Plan) Resolve() ([]Step, []error) {
 	for i, op := range p.Operations {
 		s := Step{Index: i + 1, Op: op}
 		fail := func(format string, a ...any) {
-			errs = append(errs, fmt.Errorf("operation %d (%s): %s", i+1, op.Op, fmt.Sprintf(format, a...)))
+			errs = append(errs, &OpError{Index: i + 1, Op: op.Op, Msg: fmt.Sprintf(format, a...)})
 		}
 		abs := func(rel string) string {
 			a, err := pathx.Abs(rel, p.Root)

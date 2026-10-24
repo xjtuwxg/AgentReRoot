@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>reroot</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f766e'/%3E%3Cpath d='M9 22V10h8a4 4 0 0 1 0 8h-8m7 0 6 4' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="logo">r</span> reroot</div>
+  <div class="root" id="root-path"></div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="overview" class="active">Overview</button>
+    <button role="tab" data-tab="projects">Projects</button>
+    <button role="tab" data-tab="plan">Plan <span class="badge" id="plan-count">0</span></button>
+    <button role="tab" data-tab="history">History</button>
+  </nav>
+  <button class="btn ghost" id="rescan" title="Scan the workspace again">Rescan</button>
+</header>
+
+<main>
+  <section id="tab-overview" class="tab active">
+    <div class="tiles" id="tiles"></div>
+    <div class="card">
+      <div class="card-head">
+        <h2>Workspace map</h2>
+        <div class="controls">
+          <label>Size by
+            <select id="map-size">
+              <option value="files">files</option>
+              <option value="bytes">disk size</option>
+              <option value="equal">equal</option>
+            </select>
+          </label>
+          <div class="legend" id="legend"></div>
+        </div>
+      </div>
+      <p class="hint">Each tile is a project, grouped by folder and colored by last activity. Click a tile for details and actions.</p>
+      <div class="treemap" id="treemap"></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-head"><h2>Activity by folder</h2></div>
+        <div id="group-bars"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Possible overlaps</h2><span class="muted" id="dup-count"></span></div>
+        <p class="hint">Hints only: same git origin, same name, or similar names.</p>
+        <div id="dups"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-projects" class="tab">
+    <div class="card">
+      <div class="filters">
+        <input type="search" id="q" placeholder="Filter by path, language, README…">
+        <div class="chips" id="activity-filter"></div>
+        <label class="check"><input type="checkbox" id="only-agents"> with agent memory</label>
+        <label class="check"><input type="checkbox" id="only-plan"> in plan</label>
+        <span class="spacer"></span>
+        <span class="muted" id="sel-info"></span>
+        <button class="btn" id="merge-selected" disabled>Merge selected…</button>
+        <button class="btn" id="archive-selected" disabled>Archive selected</button>
+      </div>
+      <div class="table-wrap">
+        <table id="projects">
+          <thead><tr>
+            <th class="sel"><input type="checkbox" id="sel-all" aria-label="Select all"></th>
+            <th data-sort="rel">Project</th>
+            <th data-sort="activity">Activity</th>
+            <th data-sort="last">Last activity</th>
+            <th data-sort="languages">Languages</th>
+            <th data-sort="size" class="num">Size</th>
+            <th data-sort="commits" class="num">Commits 90d</th>
+            <th data-sort="agents" class="num">Agent sessions</th>
+            <th></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-plan" class="tab">
+    <div class="grid-plan">
+      <div class="card">
+        <div class="card-head">
+          <h2>Operations</h2>
+          <div class="controls">
+            <button class="btn ghost" data-add="move">+ Move</button>
+            <button class="btn ghost" data-add="merge">+ Merge</button>
+            <button class="btn ghost" data-add="archive">+ Archive</button>
+          </div>
+        </div>
+        <p class="hint">Operations run top to bottom; each one sees the result of the ones above. Paths are relative to the workspace root. Saved to <code id="plan-file"></code>.</p>
+        <div id="ops"></div>
+        <div class="empty" id="ops-empty">No operations yet. Add some here, or use the actions on the Overview and Projects tabs.</div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2>Preview</h2>
+          <div class="controls">
+            <button class="btn" id="dryrun">Dry run</button>
+            <button class="btn primary" id="apply" disabled>Apply…</button>
+          </div>
+        </div>
+        <div id="preview"><div class="empty">Run a dry run to see every directory move and every agent-state change, without touching anything.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-history" class="tab">
+    <div class="card">
+      <div class="card-head"><h2>Applied plans</h2></div>
+      <div id="history"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Agent state check</h2><button class="btn ghost" id="verify">Run verify</button></div>
+      <p class="hint">Agent sessions, memory and settings that point to folders that no longer exist.</p>
+      <div id="verify-out"></div>
+    </div>
+  </section>
+</main>
+
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <button class="close" id="drawer-close" aria-label="Close">×</button>
+  <div id="drawer-body"></div>
+</aside>
+
+<div class="modal-back" id="modal" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3 id="modal-title"></h3>
+    <div id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="modal-cancel">Cancel</button>
+      <button class="btn primary" id="modal-ok">OK</button>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip" hidden></div>
+<div class="toast" id="toast" hidden></div>
+<datalist id="dirs"></datalist>
+<script src="app.js"></script>
+</body>
+</html>

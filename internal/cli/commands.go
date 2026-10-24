@@ -17,6 +17,7 @@ import (
 	"github.com/xjtuwxg/AgentReRoot/internal/pathx"
 	"github.com/xjtuwxg/AgentReRoot/internal/plan"
 	"github.com/xjtuwxg/AgentReRoot/internal/scan"
+	"github.com/xjtuwxg/AgentReRoot/internal/ui"
 )
 
 func rootArg(args []string) (string, error) {
@@ -309,4 +310,39 @@ func (a *app) verifyCmd() *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func (a *app) uiCmd() *cobra.Command {
+	var planFile, addr string
+	var depth int
+	var noOpen bool
+	cmd := &cobra.Command{
+		Use:   "ui [root]",
+		Short: "Open the local web UI: workspace map, plan editor, dry run, apply, undo",
+		Long: `Starts a web UI on 127.0.0.1 and opens it in the browser. The UI edits a
+plan file (default ~/.reroot/plans/<root>.yaml, or --plan), so a plan an
+agent wrote can be reviewed and applied here, and vice versa.`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			root, err := rootArg(args)
+			if err != nil {
+				return err
+			}
+			if planFile == "" {
+				if planFile, err = ui.DefaultPlanFile(root); err != nil {
+					return err
+				}
+			} else if planFile, err = pathx.Abs(planFile, ""); err != nil {
+				return err
+			}
+			return ui.Serve(ui.Options{Root: root, PlanFile: planFile, Addr: addr, Depth: depth, Open: !noOpen}, func(url string) {
+				a.printf("reroot ui for %s\nplan file: %s\n\n  %s\n\nPress Ctrl+C to stop.\n", root, planFile, url)
+			})
+		},
+	}
+	cmd.Flags().StringVar(&planFile, "plan", "", "plan file to edit")
+	cmd.Flags().StringVar(&addr, "addr", "127.0.0.1:0", "listen address (loopback only)")
+	cmd.Flags().IntVar(&depth, "depth", 5, "maximum directory depth to look for projects")
+	cmd.Flags().BoolVar(&noOpen, "no-open", false, "do not open a browser")
+	return cmd
 }

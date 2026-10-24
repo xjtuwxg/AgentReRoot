@@ -51,6 +51,7 @@ func Run(p *plan.Plan, opts Options) (*Result, error) {
 	var summary []string
 	runErr := func() error {
 		for _, s := range steps {
+			tx.Op = s.Index
 			for _, m := range s.Moves {
 				if err := move(tx, m, opts.Adapters); err != nil {
 					return fmt.Errorf("operation %d: %w", s.Index, err)
